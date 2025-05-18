@@ -1,18 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+
 import '../models/fixed_models.dart';
 
 class FixedApiService {
-  static const String baseUrl = 'https://gw.apiflow.online/api/1358f420ae2e4df794a4b4b49f53d042';
-  static const String authToken = 'ODAxMDdlMTQ1YTJlYmFhNjZjOGZiMjQ1MDRmNmY0MGQ6YTE3NjFiOTRjODM3NmE3ODNiZjVhNWU4NDlhZjlmZmQ=';
-  
+  static const String baseUrl =
+      'https://gw.apiflow.online/api/1358f420ae2e4df794a4b4b49f53d042';
+  static const String authToken =
+      'ODAxMDdlMTQ1YTJlYmFhNjZjOGZiMjQ1MDRmNmY0MGQ6YTE3NjFiOTRjODM3NmE3ODNiZjVhNWU4NDlhZjlmZmQ=';
+
   final Dio _dio = Dio();
-  
+
   FixedApiService() {
     _dio.options.baseUrl = baseUrl;
     _dio.options.headers['Authorization'] = 'Bearer $authToken';
     _dio.options.headers['Content-Type'] = 'application/json';
-    
+
     // Add logging in debug mode
     if (kDebugMode) {
       _dio.interceptors.add(LogInterceptor(
@@ -105,14 +108,16 @@ class FixedApiService {
   Future<bool> createProduct(Produto product) async {
     try {
       // Criar o produto
-      final productResponse = await _dio.post('/sp/dbo.sp_cadastrar_produto', data: {
+      final productResponse =
+          await _dio.post('/sp/dbo.sp_cadastrar_produto', data: {
         'nome': product.nome,
         'unidade_base': product.unidade_base,
         'tipo_produto': product.tipo_produto,
-        'controla_estoque': product.controla_estoque ? 1 : 0, // Convert bool to BIT (1/0)
+        'controla_estoque':
+            product.controla_estoque ? 1 : 0, // Convert bool to BIT (1/0)
         'id_categoria': product.id_categoria,
       });
-      
+
       final productId = productResponse.data['id_produto'];
       return productId != null;
     } catch (e) {
@@ -205,14 +210,15 @@ class FixedApiService {
   Future<bool> createRecipe(Receita recipe) async {
     try {
       // Criar a receita
-      final recipeResponse = await _dio.post('/sp/dbo.sp_cadastrar_receita', data: {
+      final recipeResponse =
+          await _dio.post('/sp/dbo.sp_cadastrar_receita', data: {
         'nome': recipe.nome,
         'tipo_receita': recipe.tipo_receita,
         'preco_venda': recipe.preco_venda,
         'tempo_preparo_minutos': recipe.tempo_preparo_minutos,
         'id_categoria': recipe.id_categoria,
       });
-      
+
       return recipeResponse.data['id_receita'] != null;
     } catch (e) {
       debugPrint('Error creating recipe: $e');
@@ -259,7 +265,8 @@ class FixedApiService {
 
   Future<bool> createInternalProduction(ProducaoCaseira production) async {
     try {
-      final productionResponse = await _dio.post('/sp/dbo.sp_cadastrar_producao_caseira', data: {
+      final productionResponse =
+          await _dio.post('/sp/dbo.sp_cadastrar_producao_caseira', data: {
         'nome': production.nome,
         'quantidade_gerada': production.quantidade_gerada,
         'unidade_gerada': production.unidade_gerada,
@@ -272,7 +279,7 @@ class FixedApiService {
             ? '${production.data_fim_disponivel!.year}-${production.data_fim_disponivel!.month.toString().padLeft(2, '0')}-${production.data_fim_disponivel!.day.toString().padLeft(2, '0')}'
             : null,
       });
-      
+
       return productionResponse.data['id_producao'] != null;
     } catch (e) {
       debugPrint('Error creating internal production: $e');
@@ -311,8 +318,9 @@ class FixedApiService {
       await _dio.post('/sp/dbo.sp_registrar_mesa', data: {
         'numero_mesa': table.numero_mesa,
         'quantidade_lugares': table.quantidade_lugares,
-        'status_ocupada': table.status_ocupada ? 1 : 0, // Convert bool to BIT (1/0)
-        'nome_cliente': table.nome_cliente,
+        'status_ocupada':
+            table.status_ocupada ? 1 : 0, // Convert bool to BIT (1/0)
+        'nome_cliente': table.nome_cliente ?? '',
       });
       return true;
     } catch (e) {
@@ -335,11 +343,13 @@ class FixedApiService {
 
   Future<bool> createSale(Venda sale) async {
     try {
-      final saleResponse = await _dio.post('/sp/dbo.sp_abrir_venda_mesa', data: {
+      final saleResponse =
+          await _dio.post('/sp/dbo.sp_abrir_venda_mesa', data: {
         'id_mesa': sale.id_mesa,
         'data_venda': sale.data_venda.toIso8601String(),
+        'nome_cliente': 'Cliente x',
       });
-      
+
       return saleResponse.data['id_venda'] != null;
     } catch (e) {
       debugPrint('Error creating sale: $e');
@@ -404,7 +414,7 @@ class FixedApiService {
         'data_pedido': order.data_pedido.toIso8601String(),
         'status_pedido': order.status_pedido,
       });
-      
+
       return orderResponse.data['id_pedido'] != null;
     } catch (e) {
       debugPrint('Error creating order: $e');
@@ -446,44 +456,45 @@ class FixedApiService {
   Future<double> getTodaySales() async {
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
-      
+
       final salesResponse = await _dio.get('/view/dbo.vw_vendas');
       final List<dynamic> salesData = salesResponse.data;
-      
+
       // Filtrar vendas de hoje que não estejam canceladas nem abertas
       final todaySales = salesData.where((sale) {
         final saleDate = sale['data_venda']?.toString().split('T')[0];
-        return saleDate == today && 
-              sale['cancelada'] != true && 
-              sale['cancelada'] != 1 && 
-              sale['status_aberta'] != true &&
-              sale['status_aberta'] != 1;
+        return saleDate == today &&
+            sale['cancelada'] != true &&
+            sale['cancelada'] != 1 &&
+            sale['status_aberta'] != true &&
+            sale['status_aberta'] != 1;
       }).toList();
-      
+
       // Obter os itens de pedido para calcular o valor total
       final orderItemsResponse = await _dio.get('/view/dbo.vw_pedido_itens');
       final List<dynamic> orderItemsData = orderItemsResponse.data;
-      
+
       double total = 0.0;
       for (var sale in todaySales) {
         // Obter pedidos desta venda
-        final ordersResponse = await _dio.get('/view/dbo.vw_pedidos', 
+        final ordersResponse = await _dio.get('/view/dbo.vw_pedidos',
             queryParameters: {'id_venda': sale['id_venda']});
         final List<dynamic> ordersData = ordersResponse.data;
-        
+
         for (var order in ordersData) {
           // Obter itens deste pedido
-          final orderItems = orderItemsData.where(
-            (item) => item['id_pedido'] == order['id_pedido']
-          ).toList();
-          
+          final orderItems = orderItemsData
+              .where((item) => item['id_pedido'] == order['id_pedido'])
+              .toList();
+
           // Somar os valores dos itens
           for (var item in orderItems) {
-            total += (item['quantidade'] ?? 0).toDouble() * (item['preco_unitario'] ?? 0).toDouble();
+            total += (item['quantidade'] ?? 0).toDouble() *
+                (item['preco_unitario'] ?? 0).toDouble();
           }
         }
       }
-      
+
       return total;
     } catch (e) {
       debugPrint('Error getting today sales: $e');
@@ -495,29 +506,29 @@ class FixedApiService {
     try {
       final stockResponse = await _dio.get('/view/dbo.vw_estoque_atual');
       final List<dynamic> stockData = stockResponse.data;
-      
+
       // Filtrar produtos com estoque baixo
-      final lowStockData = stockData.where(
-        (item) => (item['quantidade_disponivel'] ?? 0).toDouble() <= threshold
-      ).toList();
-      
+      final lowStockData = stockData
+          .where((item) =>
+              (item['quantidade_disponivel'] ?? 0).toDouble() <= threshold)
+          .toList();
+
       // Obter detalhes dos produtos
       final productsResponse = await _dio.get('/view/dbo.vw_produto_detalhes');
       final List<dynamic> productsData = productsResponse.data;
-      
+
       // Mapear para objetos Produto
       List<Produto> lowStockProducts = [];
       for (var stockItem in lowStockData) {
         final productData = productsData.firstWhere(
-          (p) => p['id_produto'] == stockItem['id_produto'],
-          orElse: () => {}
-        );
-        
+            (p) => p['id_produto'] == stockItem['id_produto'],
+            orElse: () => {});
+
         if (productData.isNotEmpty) {
           lowStockProducts.add(Produto.fromJson(productData));
         }
       }
-      
+
       return lowStockProducts;
     } catch (e) {
       debugPrint('Error getting low stock products: $e');

@@ -3,25 +3,6 @@
 ## Overview
 Boteco PRO is a comprehensive management system for bars and restaurants, allowing owners and staff to manage tables, products, recipes, inventory, and more.
 
-## Important Changes
-
-This repository contains corrected data models to match the SQL Server database structure. The key fixes include:
-
-1. **Fixed Data Types**:
-   - Corrected decimal representations for DECIMAL(10,2) fields
-   - Proper handling of DATE vs DATETIME fields
-   - Correct BIT field handling (boolean in Dart, 1/0 in SQL Server)
-   
-2. **Standardized Model Properties**:
-   - All model properties now match exact database field names
-   - All nullability handled correctly based on DB constraints
-   - All NVARCHAR fields properly modeled as String types
-
-3. **API Integration**:
-   - Fixed API request/response mapping
-   - Ensured proper date formatting for SQL Server DATE fields
-   - Correct handling of boolean to BIT conversions
-
 ## Usage
 
 To use the corrected models:

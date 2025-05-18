@@ -51,7 +51,7 @@ if (mounted) {
 setState(() {
 _tables = tables;
 _activeOrders = activeOrders;
-_activeTablesCount = tables.where((table) => table != null && table.status == TableStatus.occupied).length;
+_activeTablesCount = tables.where((table) => table.status == TableStatus.occupied).length;
 _todaySales = todaySales;
 _lowStockProductsCount = lowStockProducts.length;
 _isLoading = false;

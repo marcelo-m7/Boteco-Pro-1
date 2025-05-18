@@ -53,7 +53,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     final service = Provider.of<ServiceProvider>(context, listen: false);
     final orders = await service.getOrders();
     try {
-      return orders.firstWhere((o) => o.id == _order.id!);
+      return orders.firstWhere((o) => o.id == _order.id);
     } catch (e) {
       return null;
     }
