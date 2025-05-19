@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/data_models.dart';
 
 class DatabaseService {
@@ -28,7 +30,7 @@ class DatabaseService {
   // Carrega dados iniciais se necessário
   Future<void> initializeData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Verifica se já existem dados
     if (!prefs.containsKey(_mesasKey)) {
       // Cria algumas mesas de exemplo
@@ -51,13 +53,15 @@ class DatabaseService {
       ];
       await saveCategorias(categorias);
     }
-    
+
     // Cria produtos de exemplo se não existirem
     if (!prefs.containsKey(_produtosKey)) {
       final categorias = await getCategorias();
-      int idBebidas = categorias.isNotEmpty ? categorias[0].id_categoria ?? 1 : 1;
-      int idComidas = categorias.length > 1 ? categorias[1].id_categoria ?? 2 : 2;
-      
+      int idBebidas =
+          categorias.isNotEmpty ? categorias[0].id_categoria ?? 1 : 1;
+      int idComidas =
+          categorias.length > 1 ? categorias[1].id_categoria ?? 2 : 2;
+
       List<Produto> produtos = [
         Produto(
           nome: 'Chopp',
@@ -96,31 +100,27 @@ class DatabaseService {
         ),
       ];
       await saveProdutos(produtos);
-      
+
       // Criar produtos para venda baseados nos produtos
       List<ProdutoVenda> produtosVenda = [];
       for (var i = 0; i < produtos.length; i++) {
-        produtosVenda.add(
-          ProdutoVenda(
-            id_produto: i + 1, // Simulate ID
-            descricao_venda: '${produtos[i].nome} (Padrão)',
-            quantidade_base: 1,
-            preco_venda: 10.0 * (i + 1), // Sample pricing
-          )
-        );
+        produtosVenda.add(ProdutoVenda(
+          id_produto: i + 1, // Simulate ID
+          descricao_venda: '${produtos[i].nome} (Padrão)',
+          quantidade_base: 1,
+          preco_venda: 10.0 * (i + 1), // Sample pricing
+        ));
       }
       await saveProdutosVenda(produtosVenda);
-      
+
       // Criar estoque inicial
       List<Estoque> estoqueItens = [];
       for (var i = 0; i < produtos.length; i++) {
-        estoqueItens.add(
-          Estoque(
-            id_produto: i + 1,
-            quantidade_disponivel: 50.0,
-            data_atualizacao: DateTime.now(),
-          )
-        );
+        estoqueItens.add(Estoque(
+          id_produto: i + 1,
+          quantidade_disponivel: 50.0,
+          data_atualizacao: DateTime.now(),
+        ));
       }
       await saveEstoque(estoqueItens);
     }
@@ -145,13 +145,15 @@ class DatabaseService {
       ];
       await saveFornecedores(fornecedores);
     }
-    
+
     // Cria receitas de exemplo
     if (!prefs.containsKey(_receitasKey)) {
       final categorias = await getCategorias();
-      int idBebidas = categorias.isNotEmpty ? categorias[0].id_categoria ?? 1 : 1;
-      int idComidas = categorias.length > 1 ? categorias[1].id_categoria ?? 2 : 2;
-      
+      int idBebidas =
+          categorias.isNotEmpty ? categorias[0].id_categoria ?? 1 : 1;
+      int idComidas =
+          categorias.length > 1 ? categorias[1].id_categoria ?? 2 : 2;
+
       List<Receita> receitas = [
         Receita(
           nome: 'Caipirinha Tradicional',
@@ -169,7 +171,7 @@ class DatabaseService {
         ),
       ];
       await saveReceitas(receitas);
-      
+
       // Adicionar ingredientes às receitas
       final produtos = await getProdutos();
       if (produtos.isNotEmpty && receitas.isNotEmpty) {
@@ -188,7 +190,7 @@ class DatabaseService {
         await saveReceitaIngredientes(ingredientes);
       }
     }
-    
+
     // Cria produções caseiras de exemplo
     if (!prefs.containsKey(_producoesKey)) {
       List<ProducaoCaseira> producoes = [
@@ -197,12 +199,13 @@ class DatabaseService {
           quantidade_gerada: 1000.0,
           unidade_gerada: 'ml',
           tempo_preparo: 30,
-          data_inicio_producao: DateTime.now().subtract(const Duration(days: 7)),
+          data_inicio_producao:
+              DateTime.now().subtract(const Duration(days: 7)),
           data_fim_disponivel: DateTime.now().add(const Duration(days: 14)),
         ),
       ];
       await saveProducoes(producoes);
-      
+
       // Adicionar ingredientes às produções
       final produtos = await getProdutos();
       if (produtos.isNotEmpty && producoes.isNotEmpty) {
@@ -246,8 +249,9 @@ class DatabaseService {
       int nextId = 1;
       if (fornecedores.isNotEmpty) {
         nextId = fornecedores
-            .map((f) => f.id_fornecedor ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((f) => f.id_fornecedor ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       fornecedor = Fornecedor(
         id_fornecedor: nextId,
@@ -264,7 +268,8 @@ class DatabaseService {
 
   Future<void> updateFornecedor(Fornecedor fornecedor) async {
     final fornecedores = await getFornecedores();
-    final index = fornecedores.indexWhere((e) => e.id_fornecedor == fornecedor.id_fornecedor);
+    final index = fornecedores
+        .indexWhere((e) => e.id_fornecedor == fornecedor.id_fornecedor);
     if (index != -1) {
       fornecedores[index] = fornecedor;
       await saveFornecedores(fornecedores);
@@ -313,8 +318,9 @@ class DatabaseService {
       int nextId = 1;
       if (produtos.isNotEmpty) {
         nextId = produtos
-            .map((p) => p.id_produto ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((p) => p.id_produto ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       produto = Produto(
         id_produto: nextId,
@@ -333,15 +339,18 @@ class DatabaseService {
   Future<List<ProdutoVenda>> getProdutosVenda() async {
     final prefs = await SharedPreferences.getInstance();
     final produtosVendaJson = prefs.getStringList(_produtosVendaKey) ?? [];
-    return produtosVendaJson.map((e) => ProdutoVenda.fromJson(jsonDecode(e))).toList();
+    return produtosVendaJson
+        .map((e) => ProdutoVenda.fromJson(jsonDecode(e)))
+        .toList();
   }
 
   Future<void> saveProdutosVenda(List<ProdutoVenda> produtosVenda) async {
     final prefs = await SharedPreferences.getInstance();
-    final produtosVendaJson = produtosVenda.map((e) => jsonEncode(e.toJson())).toList();
+    final produtosVendaJson =
+        produtosVenda.map((e) => jsonEncode(e.toJson())).toList();
     await prefs.setStringList(_produtosVendaKey, produtosVendaJson);
   }
-  
+
   // Métodos para Estoque
   Future<List<Estoque>> getEstoque() async {
     final prefs = await SharedPreferences.getInstance();
@@ -355,7 +364,8 @@ class DatabaseService {
     await prefs.setStringList(_estoqueKey, estoqueJson);
   }
 
-  Future<void> updateEstoqueProduto(int id_produto, double nova_quantidade) async {
+  Future<void> updateEstoqueProduto(
+      int id_produto, double nova_quantidade) async {
     final estoque = await getEstoque();
     final index = estoque.indexWhere((e) => e.id_produto == id_produto);
     if (index != -1) {
@@ -366,7 +376,7 @@ class DatabaseService {
         data_atualizacao: DateTime.now(),
       );
       await saveEstoque(estoque);
-      
+
       // Registrar ajuste de estoque
       await addAjusteEstoque(AjusteEstoque(
         id_produto: id_produto,
@@ -383,7 +393,7 @@ class DatabaseService {
         data_atualizacao: DateTime.now(),
       ));
       await saveEstoque(estoque);
-      
+
       // Registrar entrada de estoque
       await addEntradaEstoque(EntradaEstoque(
         id_produto: id_produto,
@@ -398,7 +408,9 @@ class DatabaseService {
   Future<List<EntradaEstoque>> getEntradasEstoque() async {
     final prefs = await SharedPreferences.getInstance();
     final entradasJson = prefs.getStringList(_entradasEstoqueKey) ?? [];
-    return entradasJson.map((e) => EntradaEstoque.fromJson(jsonDecode(e))).toList();
+    return entradasJson
+        .map((e) => EntradaEstoque.fromJson(jsonDecode(e)))
+        .toList();
   }
 
   Future<void> saveEntradasEstoque(List<EntradaEstoque> entradas) async {
@@ -414,8 +426,9 @@ class DatabaseService {
       int nextId = 1;
       if (entradas.isNotEmpty) {
         nextId = entradas
-            .map((e) => e.id_entrada ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((e) => e.id_entrada ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       entrada = EntradaEstoque(
         id_entrada: nextId,
@@ -427,7 +440,7 @@ class DatabaseService {
     }
     entradas.add(entrada);
     await saveEntradasEstoque(entradas);
-    
+
     // Update estoque
     final estoque = await getEstoque();
     final index = estoque.indexWhere((e) => e.id_produto == entrada.id_produto);
@@ -435,7 +448,8 @@ class DatabaseService {
       estoque[index] = Estoque(
         id_estoque: estoque[index].id_estoque,
         id_produto: entrada.id_produto,
-        quantidade_disponivel: estoque[index].quantidade_disponivel + entrada.quantidade_entrada,
+        quantidade_disponivel:
+            estoque[index].quantidade_disponivel + entrada.quantidade_entrada,
         data_atualizacao: DateTime.now(),
       );
     } else {
@@ -452,7 +466,9 @@ class DatabaseService {
   Future<List<AjusteEstoque>> getAjustesEstoque() async {
     final prefs = await SharedPreferences.getInstance();
     final ajustesJson = prefs.getStringList(_ajustesEstoqueKey) ?? [];
-    return ajustesJson.map((e) => AjusteEstoque.fromJson(jsonDecode(e))).toList();
+    return ajustesJson
+        .map((e) => AjusteEstoque.fromJson(jsonDecode(e)))
+        .toList();
   }
 
   Future<void> saveAjustesEstoque(List<AjusteEstoque> ajustes) async {
@@ -468,8 +484,9 @@ class DatabaseService {
       int nextId = 1;
       if (ajustes.isNotEmpty) {
         nextId = ajustes
-            .map((e) => e.id_ajuste ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((e) => e.id_ajuste ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       ajuste = AjusteEstoque(
         id_ajuste: nextId,
@@ -482,7 +499,7 @@ class DatabaseService {
     }
     ajustes.add(ajuste);
     await saveAjustesEstoque(ajustes);
-    
+
     // Update estoque directly
     final estoque = await getEstoque();
     final index = estoque.indexWhere((e) => e.id_produto == ajuste.id_produto);
@@ -538,9 +555,9 @@ class DatabaseService {
     if (venda.id_venda == null) {
       int nextId = 1;
       if (vendas.isNotEmpty) {
-        nextId = vendas
-            .map((v) => v.id_venda ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+        nextId =
+            vendas.map((v) => v.id_venda ?? 0).reduce((a, b) => a > b ? a : b) +
+                1;
       }
       venda = Venda(
         id_venda: nextId,
@@ -575,8 +592,9 @@ class DatabaseService {
 
       // Atualiza estoque dos produtos
       final pedidos = await getPedidos();
-      final pedidosVenda = pedidos.where((p) => p.id_venda == id_venda).toList();
-      
+      final pedidosVenda =
+          pedidos.where((p) => p.id_venda == id_venda).toList();
+
       for (var pedido in pedidosVenda) {
         final itens = await getPedidoItensByPedido(pedido.id_pedido!);
         for (var item in itens) {
@@ -644,8 +662,9 @@ class DatabaseService {
       int nextId = 1;
       if (pedidos.isNotEmpty) {
         nextId = pedidos
-            .map((p) => p.id_pedido ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((p) => p.id_pedido ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       pedido = Pedido(
         id_pedido: nextId,
@@ -696,8 +715,9 @@ class DatabaseService {
       int nextId = 1;
       if (itens.isNotEmpty) {
         nextId = itens
-            .map((i) => i.id_pedido_item ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((i) => i.id_pedido_item ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       item = PedidoItem(
         id_pedido_item: nextId,
@@ -733,8 +753,9 @@ class DatabaseService {
       int nextId = 1;
       if (receitas.isNotEmpty) {
         nextId = receitas
-            .map((r) => r.id_receita ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((r) => r.id_receita ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       receita = Receita(
         id_receita: nextId,
@@ -753,17 +774,22 @@ class DatabaseService {
   Future<List<ReceitaIngrediente>> getReceitaIngredientes() async {
     final prefs = await SharedPreferences.getInstance();
     final ingredientesJson = prefs.getStringList(_receitaIngredientesKey) ?? [];
-    return ingredientesJson.map((e) => ReceitaIngrediente.fromJson(jsonDecode(e))).toList();
+    return ingredientesJson
+        .map((e) => ReceitaIngrediente.fromJson(jsonDecode(e)))
+        .toList();
   }
 
-  Future<List<ReceitaIngrediente>> getReceitaIngredientesByReceita(int id_receita) async {
+  Future<List<ReceitaIngrediente>> getReceitaIngredientesByReceita(
+      int id_receita) async {
     final ingredientes = await getReceitaIngredientes();
     return ingredientes.where((i) => i.id_receita == id_receita).toList();
   }
 
-  Future<void> saveReceitaIngredientes(List<ReceitaIngrediente> ingredientes) async {
+  Future<void> saveReceitaIngredientes(
+      List<ReceitaIngrediente> ingredientes) async {
     final prefs = await SharedPreferences.getInstance();
-    final ingredientesJson = ingredientes.map((e) => jsonEncode(e.toJson())).toList();
+    final ingredientesJson =
+        ingredientes.map((e) => jsonEncode(e.toJson())).toList();
     await prefs.setStringList(_receitaIngredientesKey, ingredientesJson);
   }
 
@@ -773,9 +799,9 @@ class DatabaseService {
     if (ingrediente.id == null) {
       int nextId = 1;
       if (ingredientes.isNotEmpty) {
-        nextId = ingredientes
-            .map((i) => i.id ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+        nextId =
+            ingredientes.map((i) => i.id ?? 0).reduce((a, b) => a > b ? a : b) +
+                1;
       }
       ingrediente = ReceitaIngrediente(
         id: nextId,
@@ -792,7 +818,9 @@ class DatabaseService {
   Future<List<ProducaoCaseira>> getProducoes() async {
     final prefs = await SharedPreferences.getInstance();
     final producoesJson = prefs.getStringList(_producoesKey) ?? [];
-    return producoesJson.map((e) => ProducaoCaseira.fromJson(jsonDecode(e))).toList();
+    return producoesJson
+        .map((e) => ProducaoCaseira.fromJson(jsonDecode(e)))
+        .toList();
   }
 
   Future<void> saveProducoes(List<ProducaoCaseira> producoes) async {
@@ -808,8 +836,9 @@ class DatabaseService {
       int nextId = 1;
       if (producoes.isNotEmpty) {
         nextId = producoes
-            .map((p) => p.id_producao ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((p) => p.id_producao ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       producao = ProducaoCaseira(
         id_producao: nextId,
@@ -828,18 +857,24 @@ class DatabaseService {
   // Métodos para Ingredientes de Produção
   Future<List<ProducaoIngrediente>> getProducaoIngredientes() async {
     final prefs = await SharedPreferences.getInstance();
-    final ingredientesJson = prefs.getStringList(_producaoIngredientesKey) ?? [];
-    return ingredientesJson.map((e) => ProducaoIngrediente.fromJson(jsonDecode(e))).toList();
+    final ingredientesJson =
+        prefs.getStringList(_producaoIngredientesKey) ?? [];
+    return ingredientesJson
+        .map((e) => ProducaoIngrediente.fromJson(jsonDecode(e)))
+        .toList();
   }
 
-  Future<List<ProducaoIngrediente>> getProducaoIngredientesByProducao(int id_producao) async {
+  Future<List<ProducaoIngrediente>> getProducaoIngredientesByProducao(
+      int id_producao) async {
     final ingredientes = await getProducaoIngredientes();
     return ingredientes.where((i) => i.id_producao == id_producao).toList();
   }
 
-  Future<void> saveProducaoIngredientes(List<ProducaoIngrediente> ingredientes) async {
+  Future<void> saveProducaoIngredientes(
+      List<ProducaoIngrediente> ingredientes) async {
     final prefs = await SharedPreferences.getInstance();
-    final ingredientesJson = ingredientes.map((e) => jsonEncode(e.toJson())).toList();
+    final ingredientesJson =
+        ingredientes.map((e) => jsonEncode(e.toJson())).toList();
     await prefs.setStringList(_producaoIngredientesKey, ingredientesJson);
   }
 
@@ -849,9 +884,9 @@ class DatabaseService {
     if (ingrediente.id == null) {
       int nextId = 1;
       if (ingredientes.isNotEmpty) {
-        nextId = ingredientes
-            .map((i) => i.id ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+        nextId =
+            ingredientes.map((i) => i.id ?? 0).reduce((a, b) => a > b ? a : b) +
+                1;
       }
       ingrediente = ProducaoIngrediente(
         id: nextId,
@@ -862,9 +897,10 @@ class DatabaseService {
     }
     ingredientes.add(ingrediente);
     await saveProducaoIngredientes(ingredientes);
-    
+
     // Consumir estoque do ingrediente
-    await consumirEstoque(ingrediente.id_produto, ingrediente.quantidade_utilizada);
+    await consumirEstoque(
+        ingrediente.id_produto, ingrediente.quantidade_utilizada);
   }
 
   // Consumo de estoque
@@ -881,7 +917,7 @@ class DatabaseService {
           data_atualizacao: DateTime.now(),
         );
         await saveEstoque(estoque);
-        
+
         // Registrar consumo
         await addConsumoInterno(ConsumoInterno(
           id_produto: id_produto,
@@ -897,7 +933,9 @@ class DatabaseService {
   Future<List<ConsumoInterno>> getConsumosInternos() async {
     final prefs = await SharedPreferences.getInstance();
     final consumosJson = prefs.getStringList(_consumoInternoKey) ?? [];
-    return consumosJson.map((e) => ConsumoInterno.fromJson(jsonDecode(e))).toList();
+    return consumosJson
+        .map((e) => ConsumoInterno.fromJson(jsonDecode(e)))
+        .toList();
   }
 
   Future<void> saveConsumosInternos(List<ConsumoInterno> consumos) async {
@@ -913,8 +951,9 @@ class DatabaseService {
       int nextId = 1;
       if (consumos.isNotEmpty) {
         nextId = consumos
-            .map((c) => c.id_consumo ?? 0)
-            .reduce((a, b) => a > b ? a : b) + 1;
+                .map((c) => c.id_consumo ?? 0)
+                .reduce((a, b) => a > b ? a : b) +
+            1;
       }
       consumo = ConsumoInterno(
         id_consumo: nextId,
@@ -954,12 +993,13 @@ class DatabaseService {
         venda.data_venda.day == today.day &&
         !venda.status_aberta &&
         !venda.cancelada);
-    
+
     double total = 0;
     for (var venda in vendasDiarias) {
       final pedidos = await getPedidos();
-      final pedidosVenda = pedidos.where((p) => p.id_venda == venda.id_venda).toList();
-      
+      final pedidosVenda =
+          pedidos.where((p) => p.id_venda == venda.id_venda).toList();
+
       for (var pedido in pedidosVenda) {
         final itens = await getPedidoItensByPedido(pedido.id_pedido!);
         for (var item in itens) {
@@ -973,7 +1013,7 @@ class DatabaseService {
   Future<List<Produto>> getProdutosEstoqueBaixo(int threshold) async {
     final produtos = await getProdutos();
     final estoque = await getEstoque();
-    
+
     List<Produto> result = [];
     for (var produto in produtos) {
       if (produto.controla_estoque) {
@@ -985,70 +1025,13 @@ class DatabaseService {
             data_atualizacao: DateTime.now(),
           ),
         );
-        
+
         if (itemEstoque.quantidade_disponivel <= threshold) {
           result.add(produto);
         }
       }
     }
-    
+
     return result;
   }
-
-  // Legacy compatibility methods
-  Future<List<Supplier>> getSuppliers() async {
-    final fornecedores = await getFornecedores();
-    return fornecedores.map((f) => f.toSupplier()).toList();
-  }
-
-  Future<void> saveSuppliers(List<Supplier> suppliers) async {
-    final fornecedores = suppliers.map((s) => s.toFornecedor()).toList();
-    await saveFornecedores(fornecedores);
-  }
-
-  Future<void> addSupplier(Supplier supplier) async {
-    final fornecedor = supplier.toFornecedor();
-    await addFornecedor(fornecedor);
-  }
-
-  Future<void> updateSupplier(Supplier supplier) async {
-    final fornecedor = supplier.toFornecedor();
-    await updateFornecedor(fornecedor);
-  }
-
-  Future<void> deleteSupplier(String id) async {
-    // Try to parse the string ID to int
-    final intId = int.tryParse(id);
-    if (intId != null) {
-      await deleteFornecedor(intId);
-    }
-  }
-
-  Future<List<TableModel>> getTables() async {
-    final mesas = await getMesas();
-    return mesas.map((m) => m.toTableModel()).toList();
-  }
-
-  Future<void> saveTables(List<TableModel> tables) async {
-    // This would need a more elaborate conversion
-    // For now, just ensure the existing tables have the right status
-    final mesas = await getMesas();
-    
-    for (var table in tables) {
-      final intId = int.tryParse(table.id);
-      if (intId != null) {
-        final index = mesas.indexWhere((m) => m.id_mesa == intId);
-        if (index != -1) {
-          mesas[index] = mesas[index].copyWith(
-            status_ocupada: table.status == TableStatus.occupied,
-          );
-        }
-      }
-    }
-    
-    await saveMesas(mesas);
-  }
-
-  // Add legacy compatibility methods as needed for the rest of the functionality
-  // As the app is gradually migrated to the new model
 }

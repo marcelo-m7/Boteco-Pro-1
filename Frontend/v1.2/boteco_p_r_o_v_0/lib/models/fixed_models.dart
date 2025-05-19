@@ -1,8 +1,5 @@
-import 'dart:convert';
-import 'package:uuid/uuid.dart';
-
 // Used for generating temporary IDs in offline mode
-const uuid = Uuid();
+// const uuid = Uuid();
 
 // Table: Fornecedor (Supplier)
 class Fornecedor {
@@ -96,7 +93,8 @@ class Produto {
   final int? id_produto; // Using nullable to handle new entries
   String nome; // NVARCHAR(100)
   String unidade_base; // NVARCHAR(20)
-  String tipo_produto; // NVARCHAR(20) - 'compra', 'producao', 'ingrediente', 'ambos'
+  String
+      tipo_produto; // NVARCHAR(20) - 'compra', 'producao', 'ingrediente', 'ambos'
   bool controla_estoque; // BIT - represents boolean value
   int? id_categoria; // FK Categoria
 
@@ -143,7 +141,8 @@ class Produto {
       nome: json['nome'] ?? '',
       unidade_base: json['unidade_base'] ?? 'unidade',
       tipo_produto: json['tipo_produto'] ?? 'compra',
-      controla_estoque: json['controla_estoque'] == true || json['controla_estoque'] == 1,
+      controla_estoque:
+          json['controla_estoque'] == true || json['controla_estoque'] == 1,
       id_categoria: json['id_categoria'],
     );
   }
@@ -216,7 +215,8 @@ class Receita {
       nome: nome ?? this.nome,
       tipo_receita: tipo_receita ?? this.tipo_receita,
       preco_venda: preco_venda ?? this.preco_venda,
-      tempo_preparo_minutos: tempo_preparo_minutos ?? this.tempo_preparo_minutos,
+      tempo_preparo_minutos:
+          tempo_preparo_minutos ?? this.tempo_preparo_minutos,
       id_categoria: id_categoria ?? this.id_categoria,
     );
   }
@@ -585,7 +585,8 @@ class Mesa {
     return Mesa(
       id_mesa: json['id_mesa'],
       numero_mesa: json['numero_mesa'] ?? 0,
-      status_ocupada: json['status_ocupada'] == true || json['status_ocupada'] == 1,
+      status_ocupada:
+          json['status_ocupada'] == true || json['status_ocupada'] == 1,
       nome_cliente: json['nome_cliente'],
       quantidade_lugares: json['quantidade_lugares'] ?? 4,
     );
@@ -640,7 +641,8 @@ class Venda {
       data_venda: json['data_venda'] != null
           ? DateTime.parse(json['data_venda'])
           : DateTime.now(),
-      status_aberta: json['status_aberta'] == true || json['status_aberta'] == 1,
+      status_aberta:
+          json['status_aberta'] == true || json['status_aberta'] == 1,
       cancelada: json['cancelada'] == true || json['cancelada'] == 1,
     );
   }
@@ -653,7 +655,8 @@ class Pedido {
   int id_mesa; // FK Mesa
   String? nome_funcionario; // NVARCHAR(100)
   DateTime data_pedido; // DATETIME
-  String status_pedido; // NVARCHAR(20) - 'pendente', 'preparando', 'pronto', 'entregue', 'cancelado'
+  String
+      status_pedido; // NVARCHAR(20) - 'pendente', 'preparando', 'pronto', 'entregue', 'cancelado'
 
   Pedido({
     this.id_pedido,
