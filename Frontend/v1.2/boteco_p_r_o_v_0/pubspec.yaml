@@ -36,4 +36,13 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/sounds/
+    - assets/sounds/erro.mp3
+    - assets/sounds/mesa_aberta.mp3
+    - assets/sounds/mesa_fechada.mp3
+    - assets/sounds/navegacao.mp3
+    - assets/sounds/notificacao.mp3
+    - assets/sounds/pedido_adicionado.mp3
+    - assets/sounds/pedido_entregue.mp3
+    - assets/sounds/produto_adicionado.mp3
+    - assets/sounds/sucesso.mp3
+    - assets/sounds/venda_fechada.mp3

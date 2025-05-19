@@ -353,17 +353,17 @@ class ApiService {
 
   Future<bool> createInternalProduction(ProducaoCaseira production) async {
     try {
-      final productionResponse = await _dio.post(
-          '/sp/dbo.sp_cadastrar_producao_caseira',
-          data: {
-            'nome': production.nome,
-            'quantidade_gerada': production.quantidade_gerada,
-            'unidade_gerada': production.unidade_gerada,
-            'tempo_preparo': production.tempo_preparo ?? 0, // Valor default se null
-            'data_inicio_producao': production.data_inicio_producao?.toIso8601String(),
-            'data_fim_disponivel': production.data_fim_disponivel?.toIso8601String(),
-          }
-      );
+      final productionResponse =
+          await _dio.post('/sp/dbo.sp_cadastrar_producao_caseira', data: {
+        'nome': production.nome,
+        'quantidade_gerada': production.quantidade_gerada,
+        'unidade_gerada': production.unidade_gerada,
+        'tempo_preparo': production.tempo_preparo ?? 0, // Valor default se null
+        'data_inicio_producao':
+            production.data_inicio_producao?.toIso8601String(),
+        'data_fim_disponivel':
+            production.data_fim_disponivel?.toIso8601String(),
+      });
       return productionResponse.data['id_producao'] != null;
     } catch (e) {
       debugPrint('Error creating internal production: $e');
@@ -428,23 +428,36 @@ class ApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_vendas');
       if (response.statusCode == 500) {
-        // Log do erro e retorno de lista vazia ou throw de exceção customizada
         debugPrint('Error accessing sales view: ${response.data['error']}');
         return [];
       }
-      // ... resto do código
+
+      final List<dynamic> data = response.data;
+      return data
+          .map((json) => Venda(
+                id_venda: json['id_venda'],
+                id_mesa: json['id_mesa'] ?? 0,
+                data_venda: json['data_venda'] != null
+                    ? DateTime.parse(json['data_venda'])
+                    : DateTime.now(),
+                status_aberta:
+                    json['status_aberta'] == true || json['status_aberta'] == 1,
+                cancelada: json['cancelada'] == true || json['cancelada'] == 1,
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching sales: $e');
-      return [];
+      return []; // Return empty list in case of error
     }
   }
 
   Future<bool> createSale(Venda sale) async {
     try {
-      final saleResponse = await _dio.post('/sp/dbo.sp_abrir_venda_mesa', data: {
+      final saleResponse =
+          await _dio.post('/sp/dbo.sp_abrir_venda_mesa', data: {
         'id_mesa': sale.id_mesa,
         'data_venda': sale.data_venda.toIso8601String(),
-        'nome_cliente': sale.nome_cliente ?? 'Cliente Final', // Parâmetro obrigatório
+        'nome_cliente': 'Cliente Final', // Parâmetro obrigatório
       });
       return saleResponse.data['id_venda'] != null;
     } catch (e) {
@@ -458,7 +471,7 @@ class ApiService {
       // Primeiro verifica se a venda existe e está aberta
       final sales = await getSales();
       final sale = sales.firstWhere(
-            (s) => s.id_venda == id_venda && s.status_aberta,
+        (s) => s.id_venda == id_venda && s.status_aberta,
         orElse: () => throw Exception('Venda não encontrada ou já fechada'),
       );
 
