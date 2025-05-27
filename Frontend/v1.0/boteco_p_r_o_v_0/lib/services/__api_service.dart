@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
-import '../models/fixed_models.dart';
+import '../models/__auth_models.dart';
+import '../models/data_models.dart';
 
-class FixedApiService {
+class ApiService {
   static const String baseUrl =
       'https://gw.apiflow.online/api/1358f420ae2e4df794a4b4b49f53d042';
   static const String authToken =
@@ -11,7 +13,7 @@ class FixedApiService {
 
   final Dio _dio = Dio();
 
-  FixedApiService() {
+  ApiService() {
     _dio.options.baseUrl = baseUrl;
     _dio.options.headers['Authorization'] = 'Bearer $authToken';
     _dio.options.headers['Content-Type'] = 'application/json';
@@ -25,12 +27,109 @@ class FixedApiService {
     }
   }
 
+  // RELATÓRIOS E ESTATÍSTICAS
+  Future<double> getTodaySales() async {
+    try {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      final salesResponse = await _dio.get('/view/dbo.vw_vendas');
+      final List<dynamic> salesData = salesResponse.data;
+
+      // Filtrar vendas de hoje que não estejam canceladas nem abertas
+      final todaySales = salesData.where((sale) {
+        final saleDate = sale['data_venda']?.toString().split('T')[0];
+        return saleDate == today &&
+            sale['cancelada'] != true &&
+            sale['status_aberta'] != true;
+      }).toList();
+
+      // Obter os itens de pedido para calcular o valor total
+      final orderItemsResponse = await _dio.get('/view/dbo.vw_pedido_itens');
+      final List<dynamic> orderItemsData = orderItemsResponse.data;
+
+      double total = 0.0;
+      for (var sale in todaySales) {
+        // Obter pedidos desta venda
+        final ordersResponse = await _dio.get('/view/dbo.vw_pedidos',
+            queryParameters: {'id_venda': sale['id_venda']});
+        final List<dynamic> ordersData = ordersResponse.data;
+
+        for (var order in ordersData) {
+          // Obter itens deste pedido
+          final orderItems = orderItemsData
+              .where((item) => item['id_pedido'] == order['id_pedido'])
+              .toList();
+
+          // Somar os valores dos itens
+          for (var item in orderItems) {
+            total += (item['quantidade'] ?? 0) * (item['preco_unitario'] ?? 0);
+          }
+        }
+      }
+
+      return total;
+    } catch (e) {
+      debugPrint('Error getting today sales: $e');
+      return 0.0;
+    }
+  }
+
+  Future<List<SalesDetail>> fetchSalesTotals({DateTime? date}) async {
+    try {
+      String? filter;
+      if (date != null) {
+        final dateStr = DateFormat('yyyy-MM-dd').format(date);
+        filter = "(CAST(data_venda AS DATE)='$dateStr')";
+      }
+
+      final response = await _dio.get('/view/dbo.vw_total_venda_detalhada',
+          queryParameters: filter != null ? {'filter': filter} : null);
+
+      final List<dynamic> data = response.data;
+      return data.map((json) => SalesDetail.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Error fetching sales totals: $e');
+      return [];
+    }
+  }
+
+  Future<List<StockMovement>> fetchStockMovements(
+      {DateTime? start, DateTime? end}) async {
+    try {
+      String? filter;
+      if (start != null && end != null) {
+        final startStr = DateFormat('yyyy-MM-dd').format(start);
+        final endStr = DateFormat('yyyy-MM-dd').format(end);
+        filter =
+            "(data_movimentacao>='$startStr' AND data_movimentacao<='$endStr')";
+      }
+
+      final response = await _dio.get('/view/dbo.vw_movimentacao_estoque_geral',
+          queryParameters: filter != null ? {'filter': filter} : null);
+
+      final List<dynamic> data = response.data;
+      return data.map((json) => StockMovement.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Error fetching stock movements: $e');
+      return [];
+    }
+  }
+
   // FORNECEDORES (Suppliers)
   Future<List<Fornecedor>> getSuppliers() async {
     try {
       final response = await _dio.get('/view/dbo.vw_fornecedor_detalhes');
       final List<dynamic> data = response.data;
-      return data.map((json) => Fornecedor.fromJson(json)).toList();
+      return data
+          .map((json) => Fornecedor(
+                id_fornecedor: json['id_fornecedor'],
+                nome: json['nome'] ?? '',
+                telefone: json['telefone'],
+                email: json['email'],
+                contato: json['contato'],
+                detalhes: json['detalhes'],
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching suppliers: $e');
       return [];
@@ -75,7 +174,13 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_categorias');
       final List<dynamic> data = response.data;
-      return data.map((json) => Categoria.fromJson(json)).toList();
+      return data
+          .map((json) => Categoria(
+                id_categoria: json['id_categoria'],
+                nome: json['nome'] ?? '',
+                descricao: json['descricao'],
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching categories: $e');
       return [];
@@ -87,7 +192,18 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_produto_detalhes');
       final List<dynamic> data = response.data;
-      return data.map((json) => Produto.fromJson(json)).toList();
+
+      return data
+          .map((json) => Produto(
+                id_produto: json['id_produto'],
+                nome: json['nome'] ?? '',
+                unidade_base: json['unidade_base'] ?? 'unidade',
+                tipo_produto: json['tipo_produto'] ?? 'compra',
+                controla_estoque: json['controla_estoque'] == true ||
+                    json['controla_estoque'] == 1,
+                id_categoria: json['id_categoria'],
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching products: $e');
       return [];
@@ -98,7 +214,16 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_produto_venda_detalhes');
       final List<dynamic> data = response.data;
-      return data.map((json) => ProdutoVenda.fromJson(json)).toList();
+
+      return data
+          .map((json) => ProdutoVenda(
+                id_venda: json['id_venda'],
+                id_produto: json['id_produto'] ?? 0,
+                descricao_venda: json['descricao_venda'] ?? '',
+                quantidade_base: (json['quantidade_base'] ?? 0).toDouble(),
+                preco_venda: (json['preco_venda'] ?? 0).toDouble(),
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching product sales: $e');
       return [];
@@ -113,8 +238,7 @@ class FixedApiService {
         'nome': product.nome,
         'unidade_base': product.unidade_base,
         'tipo_produto': product.tipo_produto,
-        'controla_estoque':
-            product.controla_estoque ? 1 : 0, // Convert bool to BIT (1/0)
+        'controla_estoque': product.controla_estoque,
         'id_categoria': product.id_categoria,
       });
 
@@ -146,7 +270,18 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_estoque_atual');
       final List<dynamic> data = response.data;
-      return data.map((json) => Estoque.fromJson(json)).toList();
+
+      return data
+          .map((json) => Estoque(
+                id_estoque: json['id_estoque'],
+                id_produto: json['id_produto'] ?? 0,
+                quantidade_disponivel:
+                    (json['quantidade_disponivel'] ?? 0).toDouble(),
+                data_atualizacao: json['data_atualizacao'] != null
+                    ? DateTime.parse(json['data_atualizacao'])
+                    : DateTime.now(),
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching stock: $e');
       return [];
@@ -189,7 +324,17 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_receita_detalhes');
       final List<dynamic> data = response.data;
-      return data.map((json) => Receita.fromJson(json)).toList();
+
+      return data
+          .map((json) => Receita(
+                id_receita: json['id_receita'],
+                nome: json['nome'] ?? '',
+                tipo_receita: json['tipo_receita'] ?? 'porcao',
+                preco_venda: (json['preco_venda'] ?? 0).toDouble(),
+                tempo_preparo_minutos: json['tempo_preparo_minutos'],
+                id_categoria: json['id_categoria'],
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching recipes: $e');
       return [];
@@ -200,7 +345,16 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_receita_ingredientes');
       final List<dynamic> data = response.data;
-      return data.map((json) => ReceitaIngrediente.fromJson(json)).toList();
+
+      return data
+          .map((json) => ReceitaIngrediente(
+                id: json['id'],
+                id_receita: json['id_receita'] ?? 0,
+                id_produto: json['id_produto'] ?? 0,
+                quantidade_utilizada:
+                    (json['quantidade_utilizada'] ?? 0).toDouble(),
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching recipe ingredients: $e');
       return [];
@@ -245,7 +399,22 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_producao_caseira_detalhes');
       final List<dynamic> data = response.data;
-      return data.map((json) => ProducaoCaseira.fromJson(json)).toList();
+
+      return data
+          .map((json) => ProducaoCaseira(
+                id_producao: json['id_producao'],
+                nome: json['nome'] ?? '',
+                quantidade_gerada: (json['quantidade_gerada'] ?? 0).toDouble(),
+                unidade_gerada: json['unidade_gerada'] ?? 'unidade',
+                tempo_preparo: json['tempo_preparo'],
+                data_inicio_producao: json['data_inicio_producao'] != null
+                    ? DateTime.parse(json['data_inicio_producao'])
+                    : null,
+                data_fim_disponivel: json['data_fim_disponivel'] != null
+                    ? DateTime.parse(json['data_fim_disponivel'])
+                    : null,
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching internal productions: $e');
       return [];
@@ -256,7 +425,16 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_producao_ingredientes');
       final List<dynamic> data = response.data;
-      return data.map((json) => ProducaoIngrediente.fromJson(json)).toList();
+
+      return data
+          .map((json) => ProducaoIngrediente(
+                id: json['id'],
+                id_producao: json['id_producao'] ?? 0,
+                id_produto: json['id_produto'] ?? 0,
+                quantidade_utilizada:
+                    (json['quantidade_utilizada'] ?? 0).toDouble(),
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching production ingredients: $e');
       return [];
@@ -271,13 +449,10 @@ class FixedApiService {
         'quantidade_gerada': production.quantidade_gerada,
         'unidade_gerada': production.unidade_gerada,
         'tempo_preparo': production.tempo_preparo,
-        // Format as yyyy-MM-dd for DATE fields
-        'data_inicio_producao': production.data_inicio_producao != null
-            ? '${production.data_inicio_producao!.year}-${production.data_inicio_producao!.month.toString().padLeft(2, '0')}-${production.data_inicio_producao!.day.toString().padLeft(2, '0')}'
-            : null,
-        'data_fim_disponivel': production.data_fim_disponivel != null
-            ? '${production.data_fim_disponivel!.year}-${production.data_fim_disponivel!.month.toString().padLeft(2, '0')}-${production.data_fim_disponivel!.day.toString().padLeft(2, '0')}'
-            : null,
+        'data_inicio_producao':
+            production.data_inicio_producao?.toIso8601String(),
+        'data_fim_disponivel':
+            production.data_fim_disponivel?.toIso8601String(),
       });
 
       return productionResponse.data['id_producao'] != null;
@@ -306,7 +481,17 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_mesas_detalhes');
       final List<dynamic> data = response.data;
-      return data.map((json) => Mesa.fromJson(json)).toList();
+
+      return data
+          .map((json) => Mesa(
+                id_mesa: json['id_mesa'],
+                numero_mesa: json['numero_mesa'] ?? 0,
+                status_ocupada: json['status_ocupada'] == true ||
+                    json['status_ocupada'] == 1,
+                nome_cliente: json['nome_cliente'],
+                quantidade_lugares: json['quantidade_lugares'] ?? 4,
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching tables: $e');
       return [];
@@ -318,9 +503,8 @@ class FixedApiService {
       await _dio.post('/sp/dbo.sp_registrar_mesa', data: {
         'numero_mesa': table.numero_mesa,
         'quantidade_lugares': table.quantidade_lugares,
-        'status_ocupada':
-            table.status_ocupada ? 1 : 0, // Convert bool to BIT (1/0)
-        'nome_cliente': table.nome_cliente ?? '',
+        'status_ocupada': table.status_ocupada,
+        'nome_cliente': table.nome_cliente,
       });
       return true;
     } catch (e) {
@@ -334,7 +518,19 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_vendas');
       final List<dynamic> data = response.data;
-      return data.map((json) => Venda.fromJson(json)).toList();
+
+      return data
+          .map((json) => Venda(
+                id_venda: json['id_venda'],
+                id_mesa: json['id_mesa'] ?? 0,
+                data_venda: json['data_venda'] != null
+                    ? DateTime.parse(json['data_venda'])
+                    : DateTime.now(),
+                status_aberta:
+                    json['status_aberta'] == true || json['status_aberta'] == 1,
+                cancelada: json['cancelada'] == true || json['cancelada'] == 1,
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching sales: $e');
       return [];
@@ -347,7 +543,6 @@ class FixedApiService {
           await _dio.post('/sp/dbo.sp_abrir_venda_mesa', data: {
         'id_mesa': sale.id_mesa,
         'data_venda': sale.data_venda.toIso8601String(),
-        'nome_cliente': 'Cliente x',
       });
 
       return saleResponse.data['id_venda'] != null;
@@ -387,7 +582,19 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_pedidos');
       final List<dynamic> data = response.data;
-      return data.map((json) => Pedido.fromJson(json)).toList();
+
+      return data
+          .map((json) => Pedido(
+                id_pedido: json['id_pedido'],
+                id_venda: json['id_venda'] ?? 0,
+                id_mesa: json['id_mesa'] ?? 0,
+                nome_funcionario: json['nome_funcionario'],
+                data_pedido: json['data_pedido'] != null
+                    ? DateTime.parse(json['data_pedido'])
+                    : DateTime.now(),
+                status_pedido: json['status_pedido'] ?? 'pendente',
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching orders: $e');
       return [];
@@ -398,7 +605,18 @@ class FixedApiService {
     try {
       final response = await _dio.get('/view/dbo.vw_pedido_itens');
       final List<dynamic> data = response.data;
-      return data.map((json) => PedidoItem.fromJson(json)).toList();
+
+      return data
+          .map((json) => PedidoItem(
+                id_pedido_item: json['id_pedido_item'],
+                id_pedido: json['id_pedido'] ?? 0,
+                tipo_item: json['tipo_item'] ?? 'produto',
+                id_item: json['id_item'] ?? 0,
+                quantidade: (json['quantidade'] ?? 0).toDouble(),
+                preco_unitario: (json['preco_unitario'] ?? 0).toDouble(),
+                observacao: json['observacao'],
+              ))
+          .toList();
     } catch (e) {
       debugPrint('Error fetching order items: $e');
       return [];
@@ -452,56 +670,6 @@ class FixedApiService {
     }
   }
 
-  // RELATÓRIOS E ESTATÍSTICAS
-  Future<double> getTodaySales() async {
-    try {
-      final today = DateTime.now().toIso8601String().split('T')[0];
-
-      final salesResponse = await _dio.get('/view/dbo.vw_vendas');
-      final List<dynamic> salesData = salesResponse.data;
-
-      // Filtrar vendas de hoje que não estejam canceladas nem abertas
-      final todaySales = salesData.where((sale) {
-        final saleDate = sale['data_venda']?.toString().split('T')[0];
-        return saleDate == today &&
-            sale['cancelada'] != true &&
-            sale['cancelada'] != 1 &&
-            sale['status_aberta'] != true &&
-            sale['status_aberta'] != 1;
-      }).toList();
-
-      // Obter os itens de pedido para calcular o valor total
-      final orderItemsResponse = await _dio.get('/view/dbo.vw_pedido_itens');
-      final List<dynamic> orderItemsData = orderItemsResponse.data;
-
-      double total = 0.0;
-      for (var sale in todaySales) {
-        // Obter pedidos desta venda
-        final ordersResponse = await _dio.get('/view/dbo.vw_pedidos',
-            queryParameters: {'id_venda': sale['id_venda']});
-        final List<dynamic> ordersData = ordersResponse.data;
-
-        for (var order in ordersData) {
-          // Obter itens deste pedido
-          final orderItems = orderItemsData
-              .where((item) => item['id_pedido'] == order['id_pedido'])
-              .toList();
-
-          // Somar os valores dos itens
-          for (var item in orderItems) {
-            total += (item['quantidade'] ?? 0).toDouble() *
-                (item['preco_unitario'] ?? 0).toDouble();
-          }
-        }
-      }
-
-      return total;
-    } catch (e) {
-      debugPrint('Error getting today sales: $e');
-      return 0.0;
-    }
-  }
-
   Future<List<Produto>> getLowStockProducts(int threshold) async {
     try {
       final stockResponse = await _dio.get('/view/dbo.vw_estoque_atual');
@@ -509,8 +677,7 @@ class FixedApiService {
 
       // Filtrar produtos com estoque baixo
       final lowStockData = stockData
-          .where((item) =>
-              (item['quantidade_disponivel'] ?? 0).toDouble() <= threshold)
+          .where((item) => (item['quantidade_disponivel'] ?? 0) <= threshold)
           .toList();
 
       // Obter detalhes dos produtos
@@ -525,7 +692,15 @@ class FixedApiService {
             orElse: () => {});
 
         if (productData.isNotEmpty) {
-          lowStockProducts.add(Produto.fromJson(productData));
+          lowStockProducts.add(Produto(
+            id_produto: productData['id_produto'],
+            nome: productData['nome'] ?? '',
+            unidade_base: productData['unidade_base'] ?? 'unidade',
+            tipo_produto: productData['tipo_produto'] ?? 'compra',
+            controla_estoque: productData['controla_estoque'] == true ||
+                productData['controla_estoque'] == 1,
+            id_categoria: productData['id_categoria'],
+          ));
         }
       }
 
